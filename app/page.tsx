@@ -15,31 +15,36 @@ import {
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
-  useSortable,
 } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 import { 
-  GripVertical, CalendarHeart, Clock, AlignLeft, ArrowUpCircle, 
-  ArrowDownCircle, MapPin, Type, FileText, Edit2, Trash2, X 
+  CalendarHeart, Clock, 
+  MapPin, Type, FileText, Edit2, 
+  Calendar,
+  PersonStanding
 } from 'lucide-react';
-import { colorClasses, PASTEL_COLORS } from './models/PastelColors';
+import { PASTEL_COLORS } from './models/PastelColors';
 import { EventModal } from './components/EventModal';
 import { SortableTimelineItem } from './components/SortableTimelineItem';
+import { EventColor, PlannerEvent } from './models/PlannerEvent';
 
 // --- MAIN PAGE COMPONENT ---
 export default function WeddingPlanner() {
+  const people: string[] = ["Groom", "Bride", "Groomsmen", "Bridesmaids", "Groom's Parents", "Bride's Parents", "Groom's Siblings", "Bride's Siblings", "Guests"];
+  
   const [mounted, setMounted] = useState(false);
   const [events, setEvents] = useState<PlannerEvent[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const[editingId, setEditingId] = useState<string | null>(null);
 
   // Form State
-  const [title, setTitle] = useState('');
+  const[title, setTitle] = useState('');
+  const [date, setDate] = useState('');
   const[startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const[location, setLocation] = useState('');
   const [description, setDescription] = useState('');
-  const [color, setColor] = useState<string>('yellow');
+  const [attendees, setAttendees] = useState<string[]>([]);
+  const[color, setColor] = useState<string>('yellow');
 
   // Load from local storage
   useEffect(() => {
@@ -71,23 +76,50 @@ export default function WeddingPlanner() {
   };
 
   const resetForm = () => {
-    setTitle(''); setStartTime(''); setEndTime(''); 
-    setLocation(''); setDescription(''); setColor('yellow');
+    setTitle(''); setDate(''); setStartTime(''); setEndTime(''); 
+    setLocation(''); setDescription(''); setColor('yellow'); setAttendees([]);
     setEditingId(null);
   };
 
+  const parseDateTime = (dateStr: string, timeStr: string) => {
+  try {
+    const d = new Date(dateStr || '1970-01-01');
+    const match = timeStr.match(/(\d+)(?::(\d+))?\s*(AM|PM)?/i);
+    if (match) {
+      let hours = parseInt(match[1], 10);
+      const minutes = parseInt(match[2] || '0', 10);
+      const modifier = match[3]?.toUpperCase();
+
+      if (modifier === 'PM' && hours !== 12) hours += 12;
+      if (modifier === 'AM' && hours === 12) hours = 0;
+
+      d.setHours(hours, minutes, 0, 0);
+    }
+    return d.getTime();
+  } catch {
+    return 0;
+  }
+};
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    let updatedEvents: PlannerEvent[];
     if (editingId) {
-      setEvents(events.map(ev => ev.id === editingId ? {
-        ...ev, title, startTime, endTime, location, description, color: color as EventColor
-      } : ev));
+      updatedEvents = events.map(ev => ev.id === editingId ? {
+        ...ev, title, date, startTime, endTime, location, description, Attendees: attendees, color: color as EventColor
+      } : ev);
     } else {
       const newEvent: PlannerEvent = {
-        id: crypto.randomUUID(), title, startTime, endTime, location, description, color: color as EventColor,
+        id: crypto.randomUUID(), title, date, startTime, endTime, location, Attendees: attendees, description, color: color as EventColor,
       };
-      setEvents([...events, newEvent]);
+      updatedEvents = [...events, newEvent];
     }
+
+    // Auto-sort chronologically by date and time
+    const sortedEvents = updatedEvents.sort((a, b) => parseDateTime(a.date, a.startTime) - parseDateTime(b.date, b.startTime));
+    
+    setEvents(sortedEvents);
     resetForm();
   };
 
@@ -95,14 +127,16 @@ export default function WeddingPlanner() {
     const eventToEdit = events.find(e => e.id === id);
     if (eventToEdit) {
       setTitle(eventToEdit.title);
+      setDate(eventToEdit.date || '');
       setStartTime(eventToEdit.startTime);
       setEndTime(eventToEdit.endTime);
       setLocation(eventToEdit.location);
       setDescription(eventToEdit.description);
+      setAttendees(eventToEdit.Attendees);
       setColor(eventToEdit.color);
       setEditingId(eventToEdit.id);
       setSelectedEventId(null); // Close modal
-      window.scrollTo({ top: 0, behavior: 'smooth' }); // Scroll back to form
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
@@ -113,7 +147,7 @@ export default function WeddingPlanner() {
     }
   };
 
-  if (!mounted) return null; // Prevent hydration mismatch
+  if (!mounted) return null;
 
   // Computed data for the modal
   const selectedIndex = events.findIndex(e => e.id === selectedEventId);
@@ -159,6 +193,16 @@ export default function WeddingPlanner() {
                       <input required value={title} onChange={e => setTitle(e.target.value)} type="text" placeholder="e.g. Rehearsal Dinner" className="input input-bordered bg-stone-50 focus:bg-white focus:ring-2 focus:ring-stone-200 focus:border-stone-400 transition-all shadow-sm w-full pl-10" />
                     </div>
                   </div>
+
+                  <div className="form-control">
+                    <label className="label"><span className="label-text font-medium text-stone-600">Date</span></label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-stone-400">
+                        <Calendar size={18} />
+                      </div>
+                      <input required value={date} onChange={e => setDate(e.target.value)} type="date" className="input input-bordered bg-stone-50 focus:bg-white focus:ring-2 focus:ring-stone-200 focus:border-stone-400 transition-all shadow-sm w-full pl-10" />
+                    </div>
+                  </div>
                   
                   <div className="grid grid-cols-2 gap-4">
                     <div className="form-control">
@@ -202,6 +246,22 @@ export default function WeddingPlanner() {
                     </div>
                   </div>
                   
+                  <div className="form-control">
+                    <label className="label"><span className="label-text font-medium text-stone-600">Attendees</span></label>
+                    <div className="relative">
+                      <div className="absolute top-3 left-0 pl-3 pointer-events-none text-stone-400">
+                        <PersonStanding size={18} />
+                      </div>
+                      <select defaultValue="Pick a color" className="select w-full bg-stone-50 focus:bg-white focus:ring-2 focus:ring-stone-200 focus:border-stone-400 transition-all shadow-sm pl-10" multiple>
+                        {people.map((p) => (
+                          <option key={p} value={p} onClick={() => setAttendees(prev => prev.includes(p) ? prev.filter(a => a !== p) : [...prev, p])}>
+                            {attendees.includes(p) ? '✓ ' : ''}{p}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
                   <div className="form-control pb-2">
                     <label className="label"><span className="label-text font-medium text-stone-600">Label Color</span></label>
                     <div className="flex gap-4 items-center mt-1 px-1">

@@ -1,13 +1,35 @@
-import { AlignLeft, ArrowDownCircle, ArrowUpCircle, Clock, Edit2, MapPin, Trash2, X } from "lucide-react";
+import { X, Calendar, Clock, MapPin, AlignLeft, ArrowUpCircle, ArrowDownCircle, Edit2, Trash2 } from "lucide-react";
+import { useRef, useEffect } from "react";
 import { PASTEL_COLORS } from "../models/PastelColors";
 
 export const EventModal = ({ isOpen, onClose, event, prevEvent, nextEvent, onEdit, onDelete }: EventModalProps) => {
-  if (!isOpen || !event) return null;
+  const dialogRef = useRef<HTMLDialogElement>(null);
 
+  // Sync React state with the native <dialog> element methods
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    
+    if (isOpen && !dialog.open) {
+      dialog.showModal();
+    } else if (!isOpen && dialog.open) {
+      dialog.close();
+    }
+  }, [isOpen]);
+
+  // Handle native "Escape" key close
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    const handleNativeClose = () => onClose();
+    dialog?.addEventListener('close', handleNativeClose);
+    return () => dialog?.removeEventListener('close', handleNativeClose);
+  }, [onClose]);
+
+  if (!event) return null;
   const colorHex = PASTEL_COLORS.find(c => c.id === event.color)?.hex;
 
   return (
-    <dialog className="modal modal-open modal-middle bg-stone-900/40 backdrop-blur-sm z-50">
+    <dialog ref={dialogRef} className="modal modal-middle backdrop-blur-sm bg-stone-900/40">
       <div 
         className="modal-box bg-white border-t-8 shadow-2xl rounded-2xl p-6 md:p-8 relative max-h-[90vh] overflow-y-auto" 
         style={{ borderColor: colorHex }}
@@ -19,13 +41,15 @@ export const EventModal = ({ isOpen, onClose, event, prevEvent, nextEvent, onEdi
 
         <h3 className="font-extrabold text-3xl text-stone-800 mb-3 pr-10">{event.title}</h3>
         
-        <div className="flex items-center gap-2 text-stone-500 font-mono mb-6 bg-stone-100 w-fit px-3 py-1 rounded-lg text-sm">
+        <div className="flex flex-wrap items-center gap-2 text-stone-500 font-mono mb-6 bg-stone-100 w-fit px-3 py-2 rounded-lg text-sm">
+          <Calendar size={16} />
+          <span>{event.date}</span>
+          <span className="text-stone-300">|</span>
           <Clock size={16} />
           <span>{event.startTime} - {event.endTime}</span>
         </div>
 
         <div className="space-y-5">
-          {/* Fixed visual error: previously the location text was missing */}
           <div>
             <div className="flex items-center gap-2 text-stone-700 font-bold mb-1">
               <MapPin size={18} className="text-stone-400"/> Location
@@ -79,9 +103,9 @@ export const EventModal = ({ isOpen, onClose, event, prevEvent, nextEvent, onEdi
         </div>
       </div>
       
-      {/* Clicking outside closes the modal */}
-      <form method="dialog" className="modal-backdrop" onClick={onClose}>
-        <button type="button" className="cursor-default">close</button>
+      {/* Clicking backdrop also closes the modal */}
+      <form method="dialog" className="modal-backdrop">
+        <button>close</button>
       </form>
     </dialog>
   );
