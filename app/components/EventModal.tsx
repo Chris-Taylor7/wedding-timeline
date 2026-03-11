@@ -1,6 +1,7 @@
 import { X, Calendar, Clock, MapPin, AlignLeft, ArrowUpCircle, ArrowDownCircle, Edit2, Trash2 } from "lucide-react";
 import { useRef, useEffect } from "react";
 import { PASTEL_COLORS } from "../models/PastelColors";
+import { EventModalProps } from "../models/EventModalProps";
 
 export const EventModal = ({ isOpen, onClose, event, prevEvent, nextEvent, onEdit, onDelete }: EventModalProps) => {
   const dialogRef = useRef<HTMLDialogElement>(null);

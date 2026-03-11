@@ -1,4 +1,6 @@
-interface EventModalProps {
+import { PlannerEvent } from "./PlannerEvent";
+
+export interface EventModalProps {
   isOpen: boolean;
   onClose: () => void;
   event: PlannerEvent | null;
