@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+@theme {
+  --font-sans: "Inter", sans-serif;
+  --color-primary: #1d4ed8;
+}
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -10,6 +15,8 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-sans: "Inter", sans-serif;
+  --color-primary: #1d4ed8;
 }
 
 @media (prefers-color-scheme: dark) {
