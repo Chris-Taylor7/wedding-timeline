@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   DndContext,
   closestCenter,
@@ -18,87 +18,27 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, CalendarHeart, Clock, AlignLeft, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
-
-// --- TYPES & CONSTANTS ---
-type EventColor = 'yellow' | 'pink' | 'sage' | 'lavender' | 'orange';
-
-interface PlannerEvent {
-  id: string;
-  title: string;
-  time: string;
-  description: string;
-  color: EventColor;
-}
-
-const PASTEL_COLORS =[
-  { id: 'yellow', hex: '#fdfd96', label: 'Pastel Yellow' },
-  { id: 'pink', hex: '#ffb7b2', label: 'Pastel Pink' },
-  { id: 'sage', hex: '#a2b5a4', label: 'Sage Green' },
-  { id: 'lavender', hex: '#cbaacb', label: 'Lavender' },
-  { id: 'orange', hex: '#ffdac1', label: 'Pastel Orange' },
-];
-
-const colorClasses: Record<string, string> = {
-  yellow: 'bg-[#fdfd96] text-amber-950 border-[#e5e57a]',
-  pink: 'bg-[#ffb7b2] text-rose-950 border-[#e69b96]',
-  sage: 'bg-[#a2b5a4] text-emerald-950 border-[#8d9f8f]',
-  lavender: 'bg-[#cbaacb] text-purple-950 border-[#b091b0]',
-  orange: 'bg-[#ffdac1] text-orange-950 border-[#e6bfa5]',
-};
-
-// --- SORTABLE TIMELINE ITEM COMPONENT ---
-const SortableTimelineItem = ({ event, index, total, onSelect }: { event: PlannerEvent, index: number, total: number, onSelect: (id: string) => void }) => {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: event.id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    zIndex: isDragging ? 50 : 1,
-    opacity: isDragging ? 0.9 : 1,
-  };
-
-  return (
-    <li ref={setNodeRef} style={style} className="relative group">
-      {index !== 0 && <hr className="bg-base-300" />}
-      
-      {/* Drag Handle (replaces traditional timeline dot) */}
-      <div className="timeline-middle">
-        <button
-          {...attributes}
-          {...listeners}
-          className="p-2 rounded-full border-2 border-transparent hover:bg-stone-200 text-stone-400 hover:text-stone-700 transition-colors cursor-grab active:cursor-grabbing touch-none"
-        >
-          <GripVertical size={20} />
-        </button>
-      </div>
-
-      {/* Only Event Name displayed here as requested */}
-      <div className="timeline-end mb-6 w-full ml-2 md:ml-4">
-        <button
-          onClick={() => onSelect(event.id)}
-          className={`timeline-box w-full max-w-sm text-left px-5 py-4 rounded-xl font-bold text-lg shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 border ${colorClasses[event.color]}`}
-        >
-          {event.title}
-        </button>
-      </div>
-
-      {index !== total - 1 && <hr className="bg-base-300" />}
-    </li>
-  );
-};
+import { 
+  GripVertical, CalendarHeart, Clock, AlignLeft, ArrowUpCircle, 
+  ArrowDownCircle, MapPin, Type, FileText, Edit2, Trash2, X 
+} from 'lucide-react';
+import { colorClasses, PASTEL_COLORS } from './models/PastelColors';
+import { EventModal } from './components/EventModal';
+import { SortableTimelineItem } from './components/SortableTimelineItem';
 
 // --- MAIN PAGE COMPONENT ---
 export default function WeddingPlanner() {
   const [mounted, setMounted] = useState(false);
   const [events, setEvents] = useState<PlannerEvent[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
-  const modalRef = useRef<HTMLDialogElement>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   // Form State
-  const[title, setTitle] = useState('');
-  const [time, setTime] = useState('');
-  const[description, setDescription] = useState('');
+  const [title, setTitle] = useState('');
+  const[startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
+  const[location, setLocation] = useState('');
+  const [description, setDescription] = useState('');
   const [color, setColor] = useState<string>('yellow');
 
   // Load from local storage
@@ -130,22 +70,47 @@ export default function WeddingPlanner() {
     }
   };
 
-  const handleAddEvent = (e: React.FormEvent) => {
-    e.preventDefault();
-    const newEvent: PlannerEvent = {
-      id: crypto.randomUUID(),
-      title,
-      time,
-      description,
-      color: color as EventColor,
-    };
-    setEvents([...events, newEvent]);
-    setTitle(''); setTime(''); setDescription(''); setColor('yellow');
+  const resetForm = () => {
+    setTitle(''); setStartTime(''); setEndTime(''); 
+    setLocation(''); setDescription(''); setColor('yellow');
+    setEditingId(null);
   };
 
-  const openModal = (id: string) => {
-    setSelectedEventId(id);
-    modalRef.current?.showModal();
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingId) {
+      setEvents(events.map(ev => ev.id === editingId ? {
+        ...ev, title, startTime, endTime, location, description, color: color as EventColor
+      } : ev));
+    } else {
+      const newEvent: PlannerEvent = {
+        id: crypto.randomUUID(), title, startTime, endTime, location, description, color: color as EventColor,
+      };
+      setEvents([...events, newEvent]);
+    }
+    resetForm();
+  };
+
+  const handleEdit = (id: string) => {
+    const eventToEdit = events.find(e => e.id === id);
+    if (eventToEdit) {
+      setTitle(eventToEdit.title);
+      setStartTime(eventToEdit.startTime);
+      setEndTime(eventToEdit.endTime);
+      setLocation(eventToEdit.location);
+      setDescription(eventToEdit.description);
+      setColor(eventToEdit.color);
+      setEditingId(eventToEdit.id);
+      setSelectedEventId(null); // Close modal
+      window.scrollTo({ top: 0, behavior: 'smooth' }); // Scroll back to form
+    }
+  };
+
+  const handleDelete = (id: string) => {
+    if (window.confirm("Are you sure you want to delete this event?")) {
+      setEvents(events.filter(e => e.id !== id));
+      setSelectedEventId(null);
+    }
   };
 
   if (!mounted) return null; // Prevent hydration mismatch
@@ -170,35 +135,82 @@ export default function WeddingPlanner() {
           
           {/* Form Section */}
           <div className="lg:col-span-5 relative">
-            <div className="card bg-white shadow-xl border border-stone-100 sticky top-8">
+            <div className={`card bg-white shadow-xl border border-stone-100 sticky top-8 transition-all ${editingId ? 'ring-2 ring-[#ffb7b2]' : ''}`}>
               <div className="card-body">
-                <h2 className="card-title text-xl mb-4 text-stone-700">Add New Event</h2>
-                <form onSubmit={handleAddEvent} className="space-y-4">
+                <div className="flex justify-between items-center mb-2">
+                  <h2 className="card-title text-xl text-stone-700">
+                    {editingId ? 'Edit Event Details' : 'Add New Event'}
+                  </h2>
+                  {editingId && (
+                    <span className="badge bg-stone-100 text-stone-600 border-none gap-1 py-3 px-3 shadow-sm font-medium">
+                      <Edit2 size={12}/> Editing
+                    </span>
+                  )}
+                </div>
+                
+                <form onSubmit={handleSubmit} className="space-y-4">
                   
                   <div className="form-control">
-                    <label className="label"><span className="label-text font-medium">Event Title</span></label>
-                    <input required value={title} onChange={e => setTitle(e.target.value)} type="text" placeholder="e.g. Rehearsal Dinner" className="input input-bordered bg-stone-50" />
+                    <label className="label"><span className="label-text font-medium text-stone-600">Event Title</span></label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-stone-400">
+                        <Type size={18} />
+                      </div>
+                      <input required value={title} onChange={e => setTitle(e.target.value)} type="text" placeholder="e.g. Rehearsal Dinner" className="input input-bordered bg-stone-50 focus:bg-white focus:ring-2 focus:ring-stone-200 focus:border-stone-400 transition-all shadow-sm w-full pl-10" />
+                    </div>
                   </div>
                   
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="form-control">
+                      <label className="label"><span className="label-text font-medium text-stone-600">Start Time</span></label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-stone-400">
+                          <Clock size={18} />
+                        </div>
+                        <input required value={startTime} onChange={e => setStartTime(e.target.value)} type="text" placeholder="6:00 PM" className="input input-bordered bg-stone-50 focus:bg-white focus:ring-2 focus:ring-stone-200 focus:border-stone-400 transition-all shadow-sm w-full pl-10" />
+                      </div>
+                    </div>
+
+                    <div className="form-control">
+                      <label className="label"><span className="label-text font-medium text-stone-600">End Time</span></label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-stone-400">
+                          <Clock size={18} />
+                        </div>
+                        <input required value={endTime} onChange={e => setEndTime(e.target.value)} type="text" placeholder="10:00 PM" className="input input-bordered bg-stone-50 focus:bg-white focus:ring-2 focus:ring-stone-200 focus:border-stone-400 transition-all shadow-sm w-full pl-10" />
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="form-control">
-                    <label className="label"><span className="label-text font-medium">Time</span></label>
-                    <input required value={time} onChange={e => setTime(e.target.value)} type="text" placeholder="e.g. 6:00 PM" className="input input-bordered bg-stone-50" />
+                    <label className="label"><span className="label-text font-medium text-stone-600">Location</span></label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-stone-400">
+                        <MapPin size={18} />
+                      </div>
+                      <input required value={location} onChange={e => setLocation(e.target.value)} type="text" placeholder="e.g. Grand Ballroom" className="input input-bordered bg-stone-50 focus:bg-white focus:ring-2 focus:ring-stone-200 focus:border-stone-400 transition-all shadow-sm w-full pl-10" />
+                    </div>
+                  </div>
+
+                  <div className="form-control">
+                    <label className="label"><span className="label-text font-medium text-stone-600">Description</span></label>
+                    <div className="relative">
+                      <div className="absolute top-3 left-0 pl-3 pointer-events-none text-stone-400">
+                        <FileText size={18} />
+                      </div>
+                      <textarea required value={description} onChange={e => setDescription(e.target.value)} placeholder="Logistics, locations, people involved..." className="textarea textarea-bordered bg-stone-50 focus:bg-white focus:ring-2 focus:ring-stone-200 focus:border-stone-400 transition-all shadow-sm w-full pl-10 h-24" />
+                    </div>
                   </div>
                   
-                  <div className="form-control">
-                    <label className="label"><span className="label-text font-medium">Description</span></label>
-                    <textarea required value={description} onChange={e => setDescription(e.target.value)} placeholder="Logistics, locations, people involved..." className="textarea textarea-bordered bg-stone-50 h-24" />
-                  </div>
-                  
-                  <div className="form-control">
-                    <label className="label"><span className="label-text font-medium">Label Color</span></label>
-                    <div className="flex gap-4 items-center mt-1">
+                  <div className="form-control pb-2">
+                    <label className="label"><span className="label-text font-medium text-stone-600">Label Color</span></label>
+                    <div className="flex gap-4 items-center mt-1 px-1">
                       {PASTEL_COLORS.map((c) => (
                         <label key={c.id} className="cursor-pointer group relative">
                           <input type="radio" name="color" className="peer sr-only" checked={color === c.id} onChange={() => setColor(c.id)} />
                           <div
                             className={`w-9 h-9 rounded-full shadow-sm transition-transform group-hover:scale-110 ${
-                              color === c.id ? 'border-[3px] border-stone-500 scale-110' : 'border border-stone-300'
+                              color === c.id ? 'border-[3px] border-stone-500 scale-110' : 'border border-stone-200 hover:border-stone-400'
                             }`}
                             style={{ backgroundColor: c.hex }}
                           />
@@ -207,9 +219,16 @@ export default function WeddingPlanner() {
                     </div>
                   </div>
                   
-                  <button type="submit" className="btn bg-stone-800 hover:bg-stone-700 text-white w-full mt-6 shadow-md border-none">
-                    Add to Timeline
-                  </button>
+                  <div className="flex gap-2 mt-4 pt-2">
+                    <button type="submit" className="btn bg-stone-800 hover:bg-stone-700 text-white flex-1 shadow-md border-none transition-colors">
+                      {editingId ? 'Save Changes' : 'Add to Timeline'}
+                    </button>
+                    {editingId && (
+                      <button type="button" onClick={resetForm} className="btn btn-outline border-stone-300 text-stone-600 hover:bg-stone-100 hover:text-stone-800 transition-colors">
+                        Cancel
+                      </button>
+                    )}
+                  </div>
                 </form>
               </div>
             </div>
@@ -219,13 +238,12 @@ export default function WeddingPlanner() {
           <div className="lg:col-span-7 pb-20">
             {events.length === 0 ? (
               <div className="text-center p-12 bg-white rounded-2xl border-2 border-dashed border-stone-200">
-                <p className="text-stone-500 text-lg">No events plotted yet.</p>
+                <p className="text-stone-500 text-lg font-medium">No events plotted yet.</p>
                 <p className="text-stone-400 text-sm mt-2">Use the form to start planning your big day!</p>
               </div>
             ) : (
               <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                 <SortableContext items={events.map(e => e.id)} strategy={verticalListSortingStrategy}>
-                  {/* timeline-compact aligns items cleanly to the left for drag & drop consistency */}
                   <ul className="timeline timeline-vertical timeline-compact w-full pt-4">
                     {events.map((event, idx) => (
                       <SortableTimelineItem
@@ -233,7 +251,7 @@ export default function WeddingPlanner() {
                         event={event}
                         index={idx}
                         total={events.length}
-                        onSelect={openModal}
+                        onSelect={setSelectedEventId}
                       />
                     ))}
                   </ul>
@@ -244,57 +262,15 @@ export default function WeddingPlanner() {
         </div>
       </div>
 
-      {/* DaisyUI Details Modal */}
-      <dialog ref={modalRef} className="modal modal-bottom sm:modal-middle">
-        <div className="modal-box bg-white border-t-8 shadow-2xl" style={{ borderColor: PASTEL_COLORS.find(c => c.id === selectedEvent?.color)?.hex }}>
-          {selectedEvent && (
-            <>
-              <h3 className="font-extrabold text-3xl text-stone-800 mb-2">{selectedEvent.title}</h3>
-              <div className="flex items-center gap-2 text-stone-500 font-mono mb-6">
-                <Clock size={16} />
-                <span>{selectedEvent.time}</span>
-              </div>
-              
-              <div className="py-4 space-y-2">
-                <div className="flex items-center gap-2 text-stone-700 font-bold mb-1">
-                  <AlignLeft size={18} /> Description
-                </div>
-                <p className="text-stone-600 leading-relaxed pl-6 whitespace-pre-line">
-                  {selectedEvent.description}
-                </p>
-              </div>
-
-              {/* Before and After display */}
-              <div className="bg-stone-50 p-5 rounded-xl mt-6 space-y-3 border border-stone-100">
-                <div className="flex gap-3 items-start">
-                  <ArrowUpCircle className="text-stone-400 mt-1" size={18} />
-                  <div>
-                    <span className="block text-xs uppercase font-bold text-stone-400">Happening Before</span>
-                    <span className="text-stone-700 font-medium">{prevEvent ? prevEvent.title : 'None (First Event)'}</span>
-                  </div>
-                </div>
-                <hr className="border-stone-200" />
-                <div className="flex gap-3 items-start">
-                  <ArrowDownCircle className="text-stone-400 mt-1" size={18} />
-                  <div>
-                    <span className="block text-xs uppercase font-bold text-stone-400">Happening After</span>
-                    <span className="text-stone-700 font-medium">{nextEvent ? nextEvent.title : 'None (Last Event)'}</span>
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
-          <div className="modal-action">
-            <form method="dialog">
-              <button className="btn hover:bg-stone-200 border-none bg-stone-100 text-stone-800">Close</button>
-            </form>
-          </div>
-        </div>
-        <form method="dialog" className="modal-backdrop">
-          <button>close</button>
-        </form>
-      </dialog>
-
+      <EventModal 
+        isOpen={!!selectedEventId} 
+        onClose={() => setSelectedEventId(null)}
+        event={selectedEvent}
+        prevEvent={prevEvent}
+        nextEvent={nextEvent}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+      />
     </div>
   );
 }
