@@ -1,10 +1,13 @@
-import { X, Calendar, Clock, MapPin, AlignLeft, ArrowUpCircle, ArrowDownCircle, Edit2, Trash2 } from "lucide-react";
-import { useRef, useEffect } from "react";
+import { X, Calendar, Clock, MapPin, AlignLeft, ArrowUpCircle, ArrowDownCircle, Edit2, Trash2, Users } from "lucide-react";
+import { useRef, useEffect, useState } from "react";
 import { PASTEL_COLORS } from "../models/PastelColors";
 import { EventModalProps } from "../models/EventModalProps";
 
 export const EventModal = ({ isOpen, onClose, event, prevEvent, nextEvent, onEdit, onDelete }: EventModalProps) => {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
   // Sync React state with the native <dialog> element methods
   useEffect(() => {
@@ -26,21 +29,62 @@ export const EventModal = ({ isOpen, onClose, event, prevEvent, nextEvent, onEdi
     return () => dialog?.removeEventListener('close', handleNativeClose);
   }, [onClose]);
 
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Only drag from the header area, not buttons or content
+    if ((e.target as HTMLElement).closest('button')) return;
+    
+    setIsDragging(true);
+    setDragOffset({
+      x: e.clientX - position.x,
+      y: e.clientY - position.y,
+    });
+  };
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging) return;
+      
+      setPosition({
+        x: e.clientX - dragOffset.x,
+        y: e.clientY - dragOffset.y,
+      });
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging, dragOffset]);
+
   if (!event) return null;
   const colorHex = PASTEL_COLORS.find(c => c.id === event.color)?.hex;
 
   return (
     <dialog ref={dialogRef} className="modal modal-middle backdrop-blur-sm bg-stone-900/40">
       <div 
-        className="modal-box bg-white border-t-8 shadow-2xl rounded-2xl p-6 md:p-8 relative max-h-[90vh] overflow-y-auto" 
-        style={{ borderColor: colorHex }}
+        className="modal-box bg-white border-t-8 shadow-2xl rounded-2xl p-6 md:p-8 relative max-h-[90vh] overflow-y-auto cursor-move"
+        style={{ 
+          borderColor: colorHex,
+          transform: `translate(${position.x}px, ${position.y}px)`,
+          transition: isDragging ? 'none' : 'transform 0.2s ease-out',
+        }}
+        onMouseDown={handleMouseDown}
       >
         {/* Close Button */}
         <button onClick={onClose} className="btn btn-sm btn-circle btn-ghost absolute right-4 top-4 text-stone-400 hover:text-stone-800">
           <X size={20} />
         </button>
 
-        <h3 className="font-extrabold text-3xl text-stone-800 mb-3 pr-10">{event.title}</h3>
+        <h3 className="font-extrabold text-3xl text-stone-800 mb-3 pr-10 select-none">{event.title}</h3>
         
         <div className="flex flex-wrap items-center gap-2 text-stone-500 font-mono mb-6 bg-stone-100 w-fit px-3 py-2 rounded-lg text-sm">
           <Calendar size={16} />
@@ -65,6 +109,23 @@ export const EventModal = ({ isOpen, onClose, event, prevEvent, nextEvent, onEdi
             <p className="text-stone-600 leading-relaxed pl-7 whitespace-pre-line">
               {event.description}
             </p>
+          </div>
+
+          <div>
+            <div className="flex items-center gap-2 text-stone-700 font-bold mb-2">
+              <Users size={18} className="text-stone-400"/> Attendees
+            </div>
+            <div className="pl-7 flex flex-wrap gap-2">
+              {event.attendeeIds && event.attendeeIds.length > 0 ? (
+                event.attendeeIds.map((attendee) => (
+                  <span key={attendee} className="badge badge-lg bg-stone-100 text-stone-700 border-stone-300">
+                    {attendee}
+                  </span>
+                ))
+              ) : (
+                <span className="text-stone-400 italic">No attendees selected</span>
+              )}
+            </div>
           </div>
         </div>
 

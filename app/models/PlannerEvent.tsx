@@ -1,5 +1,5 @@
-// --- TYPES & CONSTANTS ---
-export type EventColor = 'yellow' | 'pink' | 'sage' | 'lavender' | 'orange';
+import { EventColor } from "./EventColor";
+
 export interface PlannerEvent {
   id: string;
   title: string;
@@ -7,7 +7,7 @@ export interface PlannerEvent {
   endTime: string;
   date: string;
   location: string;
-  Attendees: string[];
+  attendeeIds: string[];
   description: string;
-  color: EventColor;
+  color: string;
 }

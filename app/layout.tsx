@@ -24,6 +24,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <title>Chris Taylor and Maddie Troyer's Wedding Timeline</title>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >

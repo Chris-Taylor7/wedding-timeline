@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import {
   DndContext,
   closestCenter,
@@ -16,16 +17,11 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import { 
-  CalendarHeart, Clock, 
-  MapPin, Type, FileText, Edit2, 
-  Calendar,
-  PersonStanding
-} from 'lucide-react';
-import { PASTEL_COLORS } from './models/PastelColors';
+import { CalendarHeart } from 'lucide-react';
 import { EventModal } from './components/EventModal';
 import { SortableTimelineItem } from './components/SortableTimelineItem';
-import { EventColor, PlannerEvent } from './models/PlannerEvent';
+import { EventForm } from './components/EventForm';
+import { PlannerEvent } from './models/PlannerEvent';
 
 // --- MAIN PAGE COMPONENT ---
 export default function WeddingPlanner() {
@@ -46,17 +42,19 @@ export default function WeddingPlanner() {
   const [attendees, setAttendees] = useState<string[]>([]);
   const[color, setColor] = useState<string>('yellow');
 
-  // Load from local storage
+  // Load from API
   useEffect(() => {
     setMounted(true);
-    const stored = localStorage.getItem('wedding-logistics');
-    if (stored) setEvents(JSON.parse(stored));
-  },[]);
-
-  // Save to local storage
-  useEffect(() => {
-    if (mounted) localStorage.setItem('wedding-logistics', JSON.stringify(events));
-  }, [events, mounted]);
+    const fetchEvents = async () => {
+      try {
+        const response = await axios.get('/api/events');
+        setEvents(response.data);
+      } catch (error) {
+        console.error('Error fetching events:', error);
+      }
+    };
+    fetchEvents();
+  }, []);
 
   // DnD Sensors
   const sensors = useSensors(
@@ -101,26 +99,37 @@ export default function WeddingPlanner() {
   }
 };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    let updatedEvents: PlannerEvent[];
-    if (editingId) {
-      updatedEvents = events.map(ev => ev.id === editingId ? {
-        ...ev, title, date, startTime, endTime, location, description, Attendees: attendees, color: color as EventColor
-      } : ev);
-    } else {
-      const newEvent: PlannerEvent = {
-        id: crypto.randomUUID(), title, date, startTime, endTime, location, Attendees: attendees, description, color: color as EventColor,
-      };
-      updatedEvents = [...events, newEvent];
-    }
+    const eventData = {
+      title,
+      date,
+      startTime,
+      endTime,
+      location,
+      description,
+      attendeeIds: attendees,
+      color,
+    };
 
-    // Auto-sort chronologically by date and time
-    const sortedEvents = updatedEvents.sort((a, b) => parseDateTime(a.date, a.startTime) - parseDateTime(b.date, b.startTime));
-    
-    setEvents(sortedEvents);
-    resetForm();
+    try {
+      if (editingId) {
+        // Update existing event
+        await axios.put(`/api/events/${editingId}`, eventData);
+      } else {
+        // Create new event
+        await axios.post('/api/events', eventData);
+      }
+
+      // Refresh events from API
+      const response = await axios.get('/api/events');
+      setEvents(response.data);
+      resetForm();
+    } catch (error) {
+      console.error('Error saving event:', error);
+      alert('Failed to save event');
+    }
   };
 
   const handleEdit = (id: string) => {
@@ -132,7 +141,7 @@ export default function WeddingPlanner() {
       setEndTime(eventToEdit.endTime);
       setLocation(eventToEdit.location);
       setDescription(eventToEdit.description);
-      setAttendees(eventToEdit.Attendees);
+      setAttendees(eventToEdit.attendeeIds);
       setColor(eventToEdit.color);
       setEditingId(eventToEdit.id);
       setSelectedEventId(null); // Close modal
@@ -140,10 +149,19 @@ export default function WeddingPlanner() {
     }
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (window.confirm("Are you sure you want to delete this event?")) {
-      setEvents(events.filter(e => e.id !== id));
-      setSelectedEventId(null);
+      try {
+        await axios.delete(`/api/events/${id}`);
+        
+        // Refresh events from API
+        const response = await axios.get('/api/events');
+        setEvents(response.data);
+        setSelectedEventId(null);
+      } catch (error) {
+        console.error('Error deleting event:', error);
+        alert('Failed to delete event');
+      }
     }
   };
 
@@ -169,129 +187,28 @@ export default function WeddingPlanner() {
           
           {/* Form Section */}
           <div className="lg:col-span-5 relative">
-            <div className={`card bg-white shadow-xl border border-stone-100 sticky top-8 transition-all ${editingId ? 'ring-2 ring-[#ffb7b2]' : ''}`}>
-              <div className="card-body">
-                <div className="flex justify-between items-center mb-2">
-                  <h2 className="card-title text-xl text-stone-700">
-                    {editingId ? 'Edit Event Details' : 'Add New Event'}
-                  </h2>
-                  {editingId && (
-                    <span className="badge bg-stone-100 text-stone-600 border-none gap-1 py-3 px-3 shadow-sm font-medium">
-                      <Edit2 size={12}/> Editing
-                    </span>
-                  )}
-                </div>
-                
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  
-                  <div className="form-control">
-                    <label className="label"><span className="label-text font-medium text-stone-600">Event Title</span></label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-stone-400">
-                        <Type size={18} />
-                      </div>
-                      <input required value={title} onChange={e => setTitle(e.target.value)} type="text" placeholder="e.g. Rehearsal Dinner" className="input input-bordered bg-stone-50 focus:bg-white focus:ring-2 focus:ring-stone-200 focus:border-stone-400 transition-all shadow-sm w-full pl-10" />
-                    </div>
-                  </div>
-
-                  <div className="form-control">
-                    <label className="label"><span className="label-text font-medium text-stone-600">Date</span></label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-stone-400">
-                        <Calendar size={18} />
-                      </div>
-                      <input required value={date} onChange={e => setDate(e.target.value)} type="date" className="input input-bordered bg-stone-50 focus:bg-white focus:ring-2 focus:ring-stone-200 focus:border-stone-400 transition-all shadow-sm w-full pl-10" />
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="form-control">
-                      <label className="label"><span className="label-text font-medium text-stone-600">Start Time</span></label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-stone-400">
-                          <Clock size={18} />
-                        </div>
-                        <input required value={startTime} onChange={e => setStartTime(e.target.value)} type="text" placeholder="6:00 PM" className="input input-bordered bg-stone-50 focus:bg-white focus:ring-2 focus:ring-stone-200 focus:border-stone-400 transition-all shadow-sm w-full pl-10" />
-                      </div>
-                    </div>
-
-                    <div className="form-control">
-                      <label className="label"><span className="label-text font-medium text-stone-600">End Time</span></label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-stone-400">
-                          <Clock size={18} />
-                        </div>
-                        <input required value={endTime} onChange={e => setEndTime(e.target.value)} type="text" placeholder="10:00 PM" className="input input-bordered bg-stone-50 focus:bg-white focus:ring-2 focus:ring-stone-200 focus:border-stone-400 transition-all shadow-sm w-full pl-10" />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="form-control">
-                    <label className="label"><span className="label-text font-medium text-stone-600">Location</span></label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-stone-400">
-                        <MapPin size={18} />
-                      </div>
-                      <input required value={location} onChange={e => setLocation(e.target.value)} type="text" placeholder="e.g. Grand Ballroom" className="input input-bordered bg-stone-50 focus:bg-white focus:ring-2 focus:ring-stone-200 focus:border-stone-400 transition-all shadow-sm w-full pl-10" />
-                    </div>
-                  </div>
-
-                  <div className="form-control">
-                    <label className="label"><span className="label-text font-medium text-stone-600">Description</span></label>
-                    <div className="relative">
-                      <div className="absolute top-3 left-0 pl-3 pointer-events-none text-stone-400">
-                        <FileText size={18} />
-                      </div>
-                      <textarea required value={description} onChange={e => setDescription(e.target.value)} placeholder="Logistics, locations, people involved..." className="textarea textarea-bordered bg-stone-50 focus:bg-white focus:ring-2 focus:ring-stone-200 focus:border-stone-400 transition-all shadow-sm w-full pl-10 h-24" />
-                    </div>
-                  </div>
-                  
-                  <div className="form-control">
-                    <label className="label"><span className="label-text font-medium text-stone-600">Attendees</span></label>
-                    <div className="relative">
-                      <div className="absolute top-3 left-0 pl-3 pointer-events-none text-stone-400">
-                        <PersonStanding size={18} />
-                      </div>
-                      <select defaultValue="Pick a color" className="select w-full bg-stone-50 focus:bg-white focus:ring-2 focus:ring-stone-200 focus:border-stone-400 transition-all shadow-sm pl-10" multiple>
-                        {people.map((p) => (
-                          <option key={p} value={p} onClick={() => setAttendees(prev => prev.includes(p) ? prev.filter(a => a !== p) : [...prev, p])}>
-                            {attendees.includes(p) ? '✓ ' : ''}{p}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="form-control pb-2">
-                    <label className="label"><span className="label-text font-medium text-stone-600">Label Color</span></label>
-                    <div className="flex gap-4 items-center mt-1 px-1">
-                      {PASTEL_COLORS.map((c) => (
-                        <label key={c.id} className="cursor-pointer group relative">
-                          <input type="radio" name="color" className="peer sr-only" checked={color === c.id} onChange={() => setColor(c.id)} />
-                          <div
-                            className={`w-9 h-9 rounded-full shadow-sm transition-transform group-hover:scale-110 ${
-                              color === c.id ? 'border-[3px] border-stone-500 scale-110' : 'border border-stone-200 hover:border-stone-400'
-                            }`}
-                            style={{ backgroundColor: c.hex }}
-                          />
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                  
-                  <div className="flex gap-2 mt-4 pt-2">
-                    <button type="submit" className="btn bg-stone-800 hover:bg-stone-700 text-white flex-1 shadow-md border-none transition-colors">
-                      {editingId ? 'Save Changes' : 'Add to Timeline'}
-                    </button>
-                    {editingId && (
-                      <button type="button" onClick={resetForm} className="btn btn-outline border-stone-300 text-stone-600 hover:bg-stone-100 hover:text-stone-800 transition-colors">
-                        Cancel
-                      </button>
-                    )}
-                  </div>
-                </form>
-              </div>
-            </div>
+            <EventForm
+              title={title}
+              date={date}
+              startTime={startTime}
+              endTime={endTime}
+              location={location}
+              description={description}
+              attendees={attendees}
+              color={color}
+              editingId={editingId}
+              onTitleChange={setTitle}
+              onDateChange={setDate}
+              onStartTimeChange={setStartTime}
+              onEndTimeChange={setEndTime}
+              onLocationChange={setLocation}
+              onDescriptionChange={setDescription}
+              onAttendeesChange={setAttendees}
+              onColorChange={setColor}
+              onSubmit={handleSubmit}
+              onCancel={resetForm}
+              people={people}
+            />
           </div>
 
           {/* Timeline Section */}

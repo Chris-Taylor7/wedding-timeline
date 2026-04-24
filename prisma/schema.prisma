@@ -1,0 +1,46 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model PlannerEvent {
+  id          String   @id @default(cuid())
+  title       String
+  startTime   String
+  endTime     String
+  date        String
+  location    String
+  description String?
+  color       String   @default("yellow")
+  attendees   EventAttendee[]
+  
+  @@map("planner_event")
+}
+
+model Attendee {
+  id     String        @id @default(cuid())
+  name   String        @unique
+  events EventAttendee[]
+  
+  @@map("attendee")
+}
+
+model EventAttendee {
+  id        String   @id @default(cuid())
+  eventId   String
+  attendeeId String
+  event     PlannerEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  attendee  Attendee @relation(fields: [attendeeId], references: [id], onDelete: Cascade)
+  
+  @@unique([eventId, attendeeId])
+  @@map("event_attendee")
+}
