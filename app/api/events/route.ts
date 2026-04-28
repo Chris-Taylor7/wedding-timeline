@@ -1,10 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
-// GET all events with attendees
-export async function GET() {
+// GET all events with attendees for a specific organizer
+export async function GET(request: NextRequest) {
   try {
+    const organizerId = request.nextUrl.searchParams.get('organizerId');
+
+    if (!organizerId) {
+      return NextResponse.json(
+        { error: 'organizerId is required' },
+        { status: 400 }
+      );
+    }
+
     const events = await prisma.plannerEvent.findMany({
+      where: {
+        organizerId,
+      },
       include: {
         attendees: {
           include: {
@@ -12,9 +24,10 @@ export async function GET() {
           },
         },
       },
-      orderBy: {
-        date: 'asc',
-      },
+      orderBy: [
+        { position: 'asc' },
+        { date: 'asc' },
+      ],
     });
 
     // Transform to include attendee names and ids
@@ -46,7 +59,24 @@ export async function POST(request: NextRequest) {
       description,
       color,
       attendeeIds,
+      organizerId,
     } = body;
+
+    if (!organizerId) {
+      return NextResponse.json(
+        { error: 'organizerId is required' },
+        { status: 400 }
+      );
+    }
+
+    // Get the highest position for this organizer
+    const maxPositionEvent = await prisma.plannerEvent.findFirst({
+      where: { organizerId },
+      orderBy: { position: 'desc' },
+      select: { position: true },
+    });
+
+    const newPosition = (maxPositionEvent?.position ?? -1) + 1;
 
     // Create event
     const event = await prisma.plannerEvent.create({
@@ -58,6 +88,8 @@ export async function POST(request: NextRequest) {
         location,
         description: description || '',
         color: color || 'yellow',
+        position: newPosition,
+        organizerId,
         attendees: {
           create: attendeeIds.map((attendeeName: string) => ({
             attendee: {
