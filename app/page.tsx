@@ -314,7 +314,7 @@ export default function WeddingPlanner() {
               ) : (
                 <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                   <SortableContext items={events.map(e => e.id)} strategy={verticalListSortingStrategy}>
-                    <ul className="timeline timeline-vertical timeline-compact w-full pt-4 space-y-2">
+                    <ul className="timeline timeline-vertical w-full pt-4 space-y-2">
                       {events.map((event, idx) => (
                         <SortableTimelineItem
                           key={event.id}
@@ -322,6 +322,7 @@ export default function WeddingPlanner() {
                           index={idx}
                           total={events.length}
                           onSelect={setSelectedEventId}
+                          isReadOnly={isReadOnly}
                         />
                       ))}
                     </ul>

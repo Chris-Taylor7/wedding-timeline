@@ -23,6 +23,10 @@ export const SignInModal: React.FC<SignInModalProps> = ({ onSignInComplete }) =>
   const [newPin, setNewPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
 
+  // PIN visibility state - separate for each field
+  const [showNewPin, setShowNewPin] = useState(false);
+  const [showConfirmPin, setShowConfirmPin] = useState(false);
+
   // Guest state
   const [selectedWeddingId, setSelectedWeddingId] = useState('');
 
@@ -260,7 +264,7 @@ export const SignInModal: React.FC<SignInModalProps> = ({ onSignInComplete }) =>
                 </label>
                 <div className='flex'>
                   <input
-                    type="password"
+                    type={showNewPin ? 'text' : 'password'}
                     value={newPin}
                     onChange={(e) => setNewPin(e.target.value)}
                     placeholder="At least 4 digits"
@@ -269,10 +273,10 @@ export const SignInModal: React.FC<SignInModalProps> = ({ onSignInComplete }) =>
                   />
                   <button
                       type="button"
-                      onClick={() => setShowPin(!showPin)}
+                      onClick={() => setShowNewPin(!showNewPin)}
                       className="absolute right-4 top-1/2 text-gray-500 hover:text-gray-700 transition  -translate-x-4 translate-y-1/32"
                     >
-                      {showPin ? <EyeOff size={20} /> : <Eye size={20} />}
+                      {showNewPin ? <EyeOff size={20} /> : <Eye size={20} />}
                   </button>
                 </div>
                 
@@ -284,7 +288,7 @@ export const SignInModal: React.FC<SignInModalProps> = ({ onSignInComplete }) =>
                 </label>
                 <div className='flex'>
                   <input
-                    type="password"
+                    type={showConfirmPin ? 'text' : 'password'}
                     value={confirmPin}
                     onChange={(e) => setConfirmPin(e.target.value)}
                     placeholder="Confirm your PIN"
@@ -293,10 +297,10 @@ export const SignInModal: React.FC<SignInModalProps> = ({ onSignInComplete }) =>
                   />
                   <button
                       type="button"
-                      onClick={() => setShowPin(!showPin)}
+                      onClick={() => setShowConfirmPin(!showConfirmPin)}
                       className="absolute right-4 top-1/2 text-gray-500 hover:text-gray-700 transition  -translate-x-4 translate-y-1/32"
                     >
-                      {showPin ? <EyeOff size={20} /> : <Eye size={20} />}
+                      {showConfirmPin ? <EyeOff size={20} /> : <Eye size={20} />}
                   </button>
                 </div>
                 
