@@ -17,10 +17,11 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import { CalendarHeart } from 'lucide-react';
+import { CalendarHeart, LogOut } from 'lucide-react';
 import { EventModal } from './components/EventModal';
 import { SortableTimelineItem } from './components/SortableTimelineItem';
 import { EventForm } from './components/EventForm';
+import { SignInModal } from './components/SignInModal';
 import { PlannerEvent } from './models/PlannerEvent';
 
 // --- MAIN PAGE COMPONENT ---
@@ -28,6 +29,13 @@ export default function WeddingPlanner() {
   const people: string[] = ["Groom", "Bride", "Groomsmen", "Bridesmaids", "Groom's Parents", "Bride's Parents", "Groom's Siblings", "Bride's Siblings", "Guests"];
   
   const [mounted, setMounted] = useState(false);
+  const [showSignIn, setShowSignIn] = useState(true);
+  
+  // Authentication state
+  const [organizerId, setOrganizerId] = useState<string | null>(null);
+  const [weddingTitle, setWeddingTitle] = useState('');
+  const [isReadOnly, setIsReadOnly] = useState(false);
+  
   const [events, setEvents] = useState<PlannerEvent[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const[editingId, setEditingId] = useState<string | null>(null);
@@ -42,19 +50,39 @@ export default function WeddingPlanner() {
   const [attendees, setAttendees] = useState<string[]>([]);
   const[color, setColor] = useState<string>('yellow');
 
-  // Load from API
   useEffect(() => {
     setMounted(true);
-    const fetchEvents = async () => {
-      try {
-        const response = await axios.get('/api/events');
-        setEvents(response.data);
-      } catch (error) {
-        console.error('Error fetching events:', error);
-      }
-    };
-    fetchEvents();
   }, []);
+
+  const handleSignIn = (newOrganizerId: string, newWeddingTitle: string, readOnly: boolean) => {
+    setOrganizerId(newOrganizerId);
+    setWeddingTitle(newWeddingTitle);
+    setIsReadOnly(readOnly);
+    setShowSignIn(false);
+    
+    // Fetch events for this organizer
+    fetchEvents(newOrganizerId);
+  };
+
+  const fetchEvents = async (orgId: string) => {
+    try {
+      const response = await axios.get('/api/events', {
+        params: { organizerId: orgId },
+      });
+      setEvents(response.data);
+    } catch (error) {
+      console.error('Error fetching events:', error);
+    }
+  };
+
+  const handleLogout = () => {
+    setOrganizerId(null);
+    setWeddingTitle('');
+    setIsReadOnly(false);
+    setEvents([]);
+    setShowSignIn(true);
+    resetForm();
+  };
 
   // DnD Sensors
   const sensors = useSensors(
@@ -102,6 +130,11 @@ export default function WeddingPlanner() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!organizerId) {
+      alert('No user logged in');
+      return;
+    }
+    
     const eventData = {
       title,
       date,
@@ -111,6 +144,7 @@ export default function WeddingPlanner() {
       description,
       attendeeIds: attendees,
       color,
+      organizerId,
     };
 
     try {
@@ -123,8 +157,9 @@ export default function WeddingPlanner() {
       }
 
       // Refresh events from API
-      const response = await axios.get('/api/events');
-      setEvents(response.data);
+      if (organizerId) {
+        await fetchEvents(organizerId);
+      }
       resetForm();
     } catch (error) {
       console.error('Error saving event:', error);
@@ -155,8 +190,9 @@ export default function WeddingPlanner() {
         await axios.delete(`/api/events/${id}`);
         
         // Refresh events from API
-        const response = await axios.get('/api/events');
-        setEvents(response.data);
+        if (organizerId) {
+          await fetchEvents(organizerId);
+        }
         setSelectedEventId(null);
       } catch (error) {
         console.error('Error deleting event:', error);
@@ -166,6 +202,10 @@ export default function WeddingPlanner() {
   };
 
   if (!mounted) return null;
+
+  if (showSignIn) {
+    return <SignInModal onSignInComplete={handleSignIn} />;
+  }
 
   // Computed data for the modal
   const selectedIndex = events.findIndex(e => e.id === selectedEventId);
@@ -178,45 +218,67 @@ export default function WeddingPlanner() {
       <div className="max-w-5xl mx-auto">
         
         {/* Header */}
-        <header className="mb-10 flex items-center gap-4 border-b border-stone-200 pb-6">
-          <CalendarHeart className="w-10 h-10 text-[#ffb7b2]" />
-          <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight">Timeline Planner</h1>
+        <header className="mb-10 flex items-center justify-between gap-4 border-b border-stone-200 pb-6">
+          <div className="flex items-center gap-4">
+            <CalendarHeart className="w-10 h-10 text-[#ffb7b2]" />
+            <div>
+              <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight">Timeline Planner</h1>
+              <p className="text-stone-600 text-sm mt-1">{weddingTitle}</p>
+            </div>
+          </div>
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-2 px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-md font-medium text-gray-700 transition"
+          >
+            <LogOut size={18} />
+            Logout
+          </button>
         </header>
+
+        {isReadOnly && (
+          <div className="mb-6 p-4 bg-blue-100 border border-blue-300 rounded-lg text-blue-800 font-medium">
+            📖 You are viewing this timeline in read-only mode
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
           
-          {/* Form Section */}
-          <div className="lg:col-span-5 relative">
-            <EventForm
-              title={title}
-              date={date}
-              startTime={startTime}
-              endTime={endTime}
-              location={location}
-              description={description}
-              attendees={attendees}
-              color={color}
-              editingId={editingId}
-              onTitleChange={setTitle}
-              onDateChange={setDate}
-              onStartTimeChange={setStartTime}
-              onEndTimeChange={setEndTime}
-              onLocationChange={setLocation}
-              onDescriptionChange={setDescription}
-              onAttendeesChange={setAttendees}
-              onColorChange={setColor}
-              onSubmit={handleSubmit}
-              onCancel={resetForm}
-              people={people}
-            />
-          </div>
+          {/* Form Section - Hidden for read-only */}
+          {!isReadOnly && (
+            <div className="lg:col-span-5 relative">
+              <EventForm
+                title={title}
+                date={date}
+                startTime={startTime}
+                endTime={endTime}
+                location={location}
+                description={description}
+                attendees={attendees}
+                color={color}
+                editingId={editingId}
+                onTitleChange={setTitle}
+                onDateChange={setDate}
+                onStartTimeChange={setStartTime}
+                onEndTimeChange={setEndTime}
+                onLocationChange={setLocation}
+                onDescriptionChange={setDescription}
+                onAttendeesChange={setAttendees}
+                onColorChange={setColor}
+                onSubmit={handleSubmit}
+                onCancel={resetForm}
+                people={people}
+              />
+            </div>
+          )}
 
           {/* Timeline Section */}
-          <div className="lg:col-span-7 pb-20">
+          <div className={isReadOnly ? 'w-full' : 'lg:col-span-7'}>
             {events.length === 0 ? (
               <div className="text-center p-12 bg-white rounded-2xl border-2 border-dashed border-stone-200">
                 <p className="text-stone-500 text-lg font-medium">No events plotted yet.</p>
-                <p className="text-stone-400 text-sm mt-2">Use the form to start planning your big day!</p>
+                {!isReadOnly && (
+                  <p className="text-stone-400 text-sm mt-2">Use the form to start planning your big day!</p>
+                )}
               </div>
             ) : (
               <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
@@ -245,8 +307,8 @@ export default function WeddingPlanner() {
         event={selectedEvent}
         prevEvent={prevEvent}
         nextEvent={nextEvent}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
+        onEdit={isReadOnly ? undefined : handleEdit}
+        onDelete={isReadOnly ? undefined : handleDelete}
       />
     </div>
   );

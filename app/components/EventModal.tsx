@@ -148,21 +148,27 @@ export const EventModal = ({ isOpen, onClose, event, prevEvent, nextEvent, onEdi
           </div>
         </div>
 
-        {/* Edit and Delete Actions */}
-        <div className="mt-8 flex gap-3 pt-2">
-          <button 
-            onClick={() => onEdit(event.id)} 
-            className="btn flex-1 bg-stone-100 hover:bg-stone-200 text-stone-700 border-none shadow-sm"
-          >
-            <Edit2 size={16} /> Edit Details
-          </button>
-          <button 
-            onClick={() => onDelete(event.id)} 
-            className="btn flex-1 bg-red-50 hover:bg-red-100 text-red-600 border-none shadow-sm"
-          >
-            <Trash2 size={16} /> Delete Event
-          </button>
-        </div>
+        {/* Edit and Delete Actions - Only show for organizers */}
+        {(onEdit || onDelete) && (
+          <div className="mt-8 flex gap-3 pt-2">
+            {onEdit && (
+              <button 
+                onClick={() => onEdit(event.id)} 
+                className="btn flex-1 bg-stone-100 hover:bg-stone-200 text-stone-700 border-none shadow-sm"
+              >
+                <Edit2 size={16} /> Edit Details
+              </button>
+            )}
+            {onDelete && (
+              <button 
+                onClick={() => onDelete(event.id)} 
+                className="btn flex-1 bg-red-50 hover:bg-red-100 text-red-600 border-none shadow-sm"
+              >
+                <Trash2 size={16} /> Delete Event
+              </button>
+            )}
+          </div>
+        )}
       </div>
       
       {/* Clicking backdrop also closes the modal */}

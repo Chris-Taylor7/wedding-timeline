@@ -12,6 +12,16 @@ datasource db {
   provider = "postgresql"
 }
 
+model Organizer {
+  id           String         @id @default(cuid())
+  firstName    String
+  weddingTitle String
+  pin          String
+  events       PlannerEvent[]
+  
+  @@map("organizer")
+}
+
 model PlannerEvent {
   id          String   @id @default(cuid())
   title       String
@@ -21,6 +31,8 @@ model PlannerEvent {
   location    String
   description String?
   color       String   @default("yellow")
+  organizerId String
+  organizer   Organizer @relation(fields: [organizerId], references: [id], onDelete: Cascade)
   attendees   EventAttendee[]
   
   @@map("planner_event")

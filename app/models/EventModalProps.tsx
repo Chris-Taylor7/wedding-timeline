@@ -6,6 +6,6 @@ export interface EventModalProps {
   event: PlannerEvent | null;
   prevEvent: PlannerEvent | null;
   nextEvent: PlannerEvent | null;
-  onEdit: (id: string) => void;
-  onDelete: (id: string) => void;
+  onEdit?: (id: string) => void;
+  onDelete?: (id: string) => void;
 }
