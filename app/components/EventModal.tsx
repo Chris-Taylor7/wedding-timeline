@@ -67,8 +67,15 @@ export const EventModal = ({ isOpen, onClose, event, prevEvent, nextEvent, onEdi
             transition: 'transform 0.2s ease-out',
           }}
         >
-          {/* Draggable Header */}
-          <DraggableHeader ref={headerRef} onClose={onClose} />
+          <div className="flex justify-between">
+            {/* Draggable Header */}
+            <DraggableHeader ref={headerRef} onClose={onClose} />
+            {/* Clicking backdrop also closes the modal */}
+            <form method="dialog" className="modal-backdrop">
+              <button className="text-5xl text-red-700">x</button>
+            </form>
+          </div>
+          
 
           <h3 className="font-extrabold text-3xl text-stone-800 mb-3 pr-10 select-none">{event.title}</h3>
           
@@ -157,10 +164,6 @@ export const EventModal = ({ isOpen, onClose, event, prevEvent, nextEvent, onEdi
           )}
         </div>
         
-        {/* Clicking backdrop also closes the modal */}
-        <form method="dialog" className="modal-backdrop">
-          <button>close</button>
-        </form>
       </dialog>
     </DndContext>
   );

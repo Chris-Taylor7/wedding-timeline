@@ -16,7 +16,7 @@ model Organizer {
   id           String         @id @default(cuid())
   firstName    String
   weddingTitle String
-  pin          String
+  pin          String         @unique
   events       PlannerEvent[]
   
   @@map("organizer")
@@ -31,6 +31,7 @@ model PlannerEvent {
   location    String
   description String?
   color       String   @default("yellow")
+  position    Int      @default(0)
   organizerId String
   organizer   Organizer @relation(fields: [organizerId], references: [id], onDelete: Cascade)
   attendees   EventAttendee[]

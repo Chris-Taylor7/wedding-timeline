@@ -102,7 +102,24 @@ export default function WeddingPlanner() {
       setEvents((items) => {
         const oldIndex = items.findIndex((i) => i.id === active.id);
         const newIndex = items.findIndex((i) => i.id === over.id);
-        return arrayMove(items, oldIndex, newIndex);
+        const reorderedItems = arrayMove(items, oldIndex, newIndex);
+        
+        // Persist the new order to the API
+        if (organizerId) {
+          const eventPositions = reorderedItems.map((item, index) => ({
+            id: item.id,
+            position: index,
+          }));
+          
+          axios.post('/api/events/reorder', {
+            eventPositions,
+            organizerId,
+          }).catch(error => {
+            console.error('Error updating event positions:', error);
+          });
+        }
+        
+        return reorderedItems;
       });
     }
   };

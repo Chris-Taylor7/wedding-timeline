@@ -20,6 +20,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check if PIN already exists
+    const existingPin = await prisma.organizer.findUnique({
+      where: { pin },
+    });
+
+    if (existingPin) {
+      return NextResponse.json(
+        { error: 'This PIN is already in use. Please select a different PIN.' },
+        { status: 409 }
+      );
+    }
+
     // Create new organizer
     const organizer = await prisma.organizer.create({
       data: {

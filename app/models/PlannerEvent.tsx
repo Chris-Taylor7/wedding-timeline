@@ -10,4 +10,5 @@ export interface PlannerEvent {
   attendeeIds: string[];
   description: string;
   color: string;
+  position?: number;
 }
