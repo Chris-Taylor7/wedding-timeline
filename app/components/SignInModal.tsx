@@ -169,7 +169,7 @@ export const SignInModal: React.FC<SignInModalProps> = ({ onSignInComplete }) =>
                 : 'text-gray-500 hover:text-gray-700'
             }`}
           >
-            Guest
+            Wedding Guest
           </button>
         </div>
 
