@@ -4,12 +4,8 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Eye, EyeOff, Heart } from 'lucide-react';
 import { Loader } from './Loader';
-
-interface SignInModalProps {
-  onSignInComplete: (organizerId: string, weddingTitle: string, isReadOnly: boolean) => void;
-}
-
-type Tab = 'login' | 'register' | 'guest';
+import { SignInModalProps } from '../models/SignInModalProps';
+import { Tab } from './ModalTabs';
 
 export const SignInModal: React.FC<SignInModalProps> = ({ onSignInComplete }) => {
   const [tab, setTab] = useState<Tab>('login');
@@ -163,13 +159,13 @@ export const SignInModal: React.FC<SignInModalProps> = ({ onSignInComplete }) =>
               setTab('guest');
               setError('');
             }}
-            className={`flex-1 py-3 px-4 font-semibold transition-all duration-300 ${
+            className={`flex-1 py-3 px-4 text-sm font-semibold transition-all duration-300 ${
               tab === 'guest'
                 ? 'border-b-4 border-[#a2b5a4] text-[#a2b5a4] bg-[#f8faf8]'
                 : 'text-gray-500 hover:text-gray-700'
             }`}
           >
-            Wedding Guest
+            Find my wedding timeline
           </button>
         </div>
 
@@ -187,7 +183,7 @@ export const SignInModal: React.FC<SignInModalProps> = ({ onSignInComplete }) =>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   PIN
                 </label>
-                <div className="relative">
+                <div className="relative flex">
                   <input
                     type={showPin ? 'text' : 'password'}
                     value={pin}
@@ -199,7 +195,7 @@ export const SignInModal: React.FC<SignInModalProps> = ({ onSignInComplete }) =>
                   <button
                     type="button"
                     onClick={() => setShowPin(!showPin)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition"
+                    className="absolute right-4 top-1/2 text-gray-500 hover:text-gray-700 transition  -translate-x-4 translate-y-1/32"
                   >
                     {showPin ? <EyeOff size={20} /> : <Eye size={20} />}
                   </button>
@@ -258,32 +254,52 @@ export const SignInModal: React.FC<SignInModalProps> = ({ onSignInComplete }) =>
                 />
               </div>
 
-              <div>
+              <div className="relative">
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Create PIN
                 </label>
-                <input
-                  type="password"
-                  value={newPin}
-                  onChange={(e) => setNewPin(e.target.value)}
-                  placeholder="At least 4 digits"
-                  className="w-full px-4 py-3 text-black placeholder-gray-400 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#cbaacb] focus:ring-2 focus:ring-[#cbaacb]/20 transition-all duration-200 bg-gray-50 focus:bg-white"
-                  disabled={loading}
-                />
+                <div className='flex'>
+                  <input
+                    type="password"
+                    value={newPin}
+                    onChange={(e) => setNewPin(e.target.value)}
+                    placeholder="At least 4 digits"
+                    className="w-full px-4 py-3 text-black placeholder-gray-400 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#cbaacb] focus:ring-2 focus:ring-[#cbaacb]/20 transition-all duration-200 bg-gray-50 focus:bg-white"
+                    disabled={loading}
+                  />
+                  <button
+                      type="button"
+                      onClick={() => setShowPin(!showPin)}
+                      className="absolute right-4 top-1/2 text-gray-500 hover:text-gray-700 transition  -translate-x-4 translate-y-1/32"
+                    >
+                      {showPin ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
+                </div>
+                
               </div>
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Confirm PIN
                 </label>
-                <input
-                  type="password"
-                  value={confirmPin}
-                  onChange={(e) => setConfirmPin(e.target.value)}
-                  placeholder="Confirm your PIN"
-                  className="w-full px-4 py-3 text-black placeholder-gray-400 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#cbaacb] focus:ring-2 focus:ring-[#cbaacb]/20 transition-all duration-200 bg-gray-50 focus:bg-white"
-                  disabled={loading}
-                />
+                <div className='flex'>
+                  <input
+                    type="password"
+                    value={confirmPin}
+                    onChange={(e) => setConfirmPin(e.target.value)}
+                    placeholder="Confirm your PIN"
+                    className="w-full px-4 py-3 text-black placeholder-gray-400 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#cbaacb] focus:ring-2 focus:ring-[#cbaacb]/20 transition-all duration-200 bg-gray-50 focus:bg-white"
+                    disabled={loading}
+                  />
+                  <button
+                      type="button"
+                      onClick={() => setShowPin(!showPin)}
+                      className="absolute right-4 top-1/2 text-gray-500 hover:text-gray-700 transition  -translate-x-4 translate-y-1/32"
+                    >
+                      {showPin ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
+                </div>
+                
               </div>
 
               {error && (
