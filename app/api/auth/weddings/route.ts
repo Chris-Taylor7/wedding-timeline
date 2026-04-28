@@ -3,11 +3,23 @@ import prisma from '@/lib/prisma';
 
 export async function GET() {
   try {
-    // Fetch all organizers to show wedding titles for guest view
     const organizers = await prisma.organizer.findMany({
       select: {
         id: true,
         weddingTitle: true,
+        // Instead of 'include', you select the relation directly
+        events: {
+          select: {
+            id: true,
+            title: true,
+            date: true,
+            startTime: true,
+            endTime: true,
+            location: true,
+            description: true,
+            color: true,
+          },
+        },
       },
     });
 

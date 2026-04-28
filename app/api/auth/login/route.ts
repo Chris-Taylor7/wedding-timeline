@@ -16,6 +16,9 @@ export async function POST(request: NextRequest) {
     // Find organizer by PIN
     const organizer = await prisma.organizer.findFirst({
       where: { pin },
+      include: {
+        events: { select: { id: true, title: true, date: true, startTime: true, endTime: true, location: true, description: true, color: true } },
+      },
     });
 
     if (!organizer) {

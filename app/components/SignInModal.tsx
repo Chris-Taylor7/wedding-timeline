@@ -15,7 +15,7 @@ export const SignInModal: React.FC<SignInModalProps> = ({ onSignInComplete }) =>
   const [tab, setTab] = useState<Tab>('login');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [weddings, setWeddings] = useState<{ id: string; title: string }[]>([]);
+  const [weddings, setWeddings] = useState<{ id: string; weddingTitle: string }[]>([]);
   const [showPin, setShowPin] = useState(false);
 
   // Login state
@@ -110,7 +110,7 @@ export const SignInModal: React.FC<SignInModalProps> = ({ onSignInComplete }) =>
 
     const selected = weddings.find((w) => w.id === selectedWeddingId);
     setTimeout(() => {
-      onSignInComplete(selectedWeddingId, selected?.title || 'Wedding', true);
+      onSignInComplete(selectedWeddingId, selected?.weddingTitle || 'Wedding', true);
     }, 600);
   };
 
@@ -321,8 +321,8 @@ export const SignInModal: React.FC<SignInModalProps> = ({ onSignInComplete }) =>
                 >
                   <option value="">Select a wedding...</option>
                   {weddings.map((wedding) => (
-                    <option key={wedding.id} value={wedding.id}>
-                      {wedding.title}
+                    <option key={wedding.id} value={wedding.id} className="text-black">
+                      {wedding.weddingTitle}
                     </option>
                   ))}
                 </select>
